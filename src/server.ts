@@ -8,7 +8,7 @@ import participantRoutes from "./routes/participant.routes";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
-const allowOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
+const allowOrigin = ((process.env.NODE_ENV ==='development') ? 'http://localhost:3000' :  process.env.CLIENT_ORIGIN) ;
 
 app.use(express.json());
 app.use(cors({
