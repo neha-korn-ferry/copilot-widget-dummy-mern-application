@@ -14,6 +14,8 @@ interface SignInBody {
 
 const router = Router();
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const credentialsAreValid = ({ email, password }: SignInBody): boolean =>
   email === VALID_CREDENTIALS.email && password === VALID_CREDENTIALS.password;
 
@@ -34,8 +36,8 @@ router.post(
     res
       .cookie("sessionId", session.id, {
         httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
+        sameSite: isProduction ? "none" : "lax",
+        secure: isProduction,
         maxAge: session.expiresAt - Date.now(),
       })
       .json({

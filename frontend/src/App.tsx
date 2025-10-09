@@ -19,7 +19,7 @@ interface ParticipantSummary {
   };
 }
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL ?? 'http://localhost:4000';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 const TOKEN_STORAGE_KEY = 'participant-demo-token';
 
 const DEFAULT_CREDENTIALS = {
