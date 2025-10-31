@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react';
 import axios from 'axios';
 import './App.css';
-
+import { DirectLineTokenProvider } from './context/DirectLineTokenContext';
+import CopilotChat from './component/CopilotChat';
 type AuthMode = 'cookie' | 'token';
 
 type ViewState = 'signin' | 'dashboard';
@@ -192,177 +193,187 @@ function App() {
     setStatus('Signed out locally. Session cookie remains until it expires.');
   };
 
-  return (
-    <div className="app-shell">
-      <div className='topbar-container'>
-        <nav className="topbar">
-          <span className="brand">Participant Insights</span>
-          {view === 'dashboard' && (
-            <button className="secondary" onClick={handleSignOut}>
-              Sign out
-            </button>
-          )}
-        </nav>
-      </div>
+  return (<>
+    <DirectLineTokenProvider>
 
-      <main className="content">
-        {view === 'signin' ? (
-          <div className="">
-            <form className="card sign-in-card" onSubmit={handleSignIn}>
-              <h1>Sign in</h1>
-              <p className="subtitle">
-                Choose an authentication method and use the provided demo
-                credentials to continue.
-              </p>
-
-              <div className="field-group">
-                <label htmlFor="email">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="field-group">
-                <label htmlFor="password">Password</label>
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                />
-              </div>
-
-              <fieldset className="field-group auth-toggle">
-                <legend>Authentication method</legend>
-                <div style={{ marginTop: '0.5rem', display: "flex", justifyContent: "space-between" }}>
-                  <label className={authMode === 'cookie' ? 'active' : undefined}>
-                    <input
-                      type="radio"
-                      name="authMode"
-                      value="cookie"
-                      checked={authMode === 'cookie'}
-                      onChange={() => setAuthMode('cookie')}
-                    />
-                    Session cookie
-                  </label>
-                  <label className={authMode === 'token' ? 'active' : undefined}>
-                    <input
-                      type="radio"
-                      name="authMode"
-                      value="token"
-                      checked={authMode === 'token'}
-                      onChange={() => setAuthMode('token')}
-                    />
-                    Bearer token
-                  </label>
-                </div>
-              </fieldset>
-
-              <button className="primary" type="submit" disabled={loading}>
-                {loading ? 'Signing in…' : 'Access dashboard'}
+      <div className="app-shell">
+        <div className='topbar-container'>
+          <nav className="topbar">
+            <span className="brand">Participant Insights</span>
+            {view === 'dashboard' && (
+              <button className="secondary" onClick={handleSignOut}>
+                Sign out
               </button>
+            )}
+          </nav>
+        </div>
+
+        <main className="content">
+          {view === 'signin' ? (
+            <div className="">
+              <form className="card sign-in-card" onSubmit={handleSignIn}>
+                <h1>Sign in</h1>
+                <p className="subtitle">
+                  Choose an authentication method and use the provided demo
+                  credentials to continue.
+                </p>
+
+                <div className="field-group">
+                  <label htmlFor="email">Email</label>
+                  <input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="field-group">
+                  <label htmlFor="password">Password</label>
+                  <input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                  />
+                </div>
+
+                <fieldset className="field-group auth-toggle">
+                  <legend>Authentication method</legend>
+                  <div style={{ marginTop: '0.5rem', display: "flex", justifyContent: "space-between" }}>
+                    <label className={authMode === 'cookie' ? 'active' : undefined}>
+                      <input
+                        type="radio"
+                        name="authMode"
+                        value="cookie"
+                        checked={authMode === 'cookie'}
+                        onChange={() => setAuthMode('cookie')}
+                      />
+                      Session cookie
+                    </label>
+                    <label className={authMode === 'token' ? 'active' : undefined}>
+                      <input
+                        type="radio"
+                        name="authMode"
+                        value="token"
+                        checked={authMode === 'token'}
+                        onChange={() => setAuthMode('token')}
+                      />
+                      Bearer token
+                    </label>
+                  </div>
+                </fieldset>
+
+                <button className="primary" type="submit" disabled={loading}>
+                  {loading ? 'Signing in…' : 'Access dashboard'}
+                </button>
+
+                {error && <p className="feedback error">{error}</p>}
+                {status && !error && (
+                  <p className="feedback success">{status}</p>
+                )}
+              </form>
+
+            </div>
+          ) : (<>
+            <div className="dashboard">
+              <header className="dashboard-header">
+                <div>
+                  <h1>Participant overview</h1>
+                  <p>
+                    Authenticated via{' '}
+                    <strong>
+                      {authenticatedVia
+                        ? authModeLabels[authenticatedVia]
+                        : '—'}
+                    </strong>
+                    . Refresh to see the latest data.
+                  </p>
+                </div>
+                <div className="dashboard-actions">
+                  <button
+                    className="secondary"
+                    onClick={handleRefresh}
+                    disabled={loading}
+                  >
+                    {loading ? 'Refreshing…' : 'Refresh summary'}
+                  </button>
+                  <button className="secondary" onClick={() => setView('signin')}>
+                    Switch account
+                  </button>
+                </div>
+              </header>
 
               {error && <p className="feedback error">{error}</p>}
               {status && !error && (
                 <p className="feedback success">{status}</p>
               )}
-            </form>
 
-          </div>
-        ) : (
-          <div className="dashboard">
-            <header className="dashboard-header">
-              <div>
-                <h1>Participant overview</h1>
-                <p>
-                  Authenticated via{' '}
-                  <strong>
-                    {authenticatedVia
-                      ? authModeLabels[authenticatedVia]
-                      : '—'}
-                  </strong>
-                  . Refresh to see the latest data.
-                </p>
-              </div>
-              <div className="dashboard-actions">
-                <button
-                  className="secondary"
-                  onClick={handleRefresh}
-                  disabled={loading}
-                >
-                  {loading ? 'Refreshing…' : 'Refresh summary'}
-                </button>
-                <button className="secondary" onClick={() => setView('signin')}>
-                  Switch account
-                </button>
-              </div>
-            </header>
-
-            {error && <p className="feedback error">{error}</p>}
-            {status && !error && (
-              <p className="feedback success">{status}</p>
-            )}
-
-            {summary ? (
-              <section className="summary-layout">
-                <article className="card summary-card">
-                  <h2>{summary.participantName}</h2>
-                  <p className="muted">{summary.email}</p>
-                  <dl>
-                    <div>
-                      <dt>Participant ID</dt>
-                      <dd>{summary.participantId}</dd>
-                    </div>
-                    <div>
-                      <dt>Authenticated via</dt>
-                      <dd>{authModeLabels[summary.authenticatedVia]}</dd>
-                    </div>
-                    {summary.expiresAt && (
+              {summary ? (
+                <section className="summary-layout">
+                  <article className="card summary-card">
+                    <h2>{summary.participantName}</h2>
+                    <p className="muted">{summary.email}</p>
+                    <dl>
                       <div>
-                        <dt>Credential expires</dt>
-                        <dd>{new Date(summary.expiresAt).toLocaleString()}</dd>
+                        <dt>Participant ID</dt>
+                        <dd>{summary.participantId}</dd>
                       </div>
-                    )}
-                  </dl>
-                </article>
+                      <div>
+                        <dt>Authenticated via</dt>
+                        <dd>{authModeLabels[summary.authenticatedVia]}</dd>
+                      </div>
+                      {summary.expiresAt && (
+                        <div>
+                          <dt>Credential expires</dt>
+                          <dd>{new Date(summary.expiresAt).toLocaleString()}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </article>
 
-                <article className="card stats-card">
-                  <h3>Engagement summary</h3>
-                  <ul>
-                    <li>
-                      <span>Total events</span>
-                      <strong>{summary.summary.totalEvents}</strong>
-                    </li>
-                    <li>
-                      <span>Sessions attended</span>
-                      <strong>{summary.summary.attendedSessions}</strong>
-                    </li>
-                    <li>
-                      <span>Score</span>
-                      <strong>{summary.summary.score}</strong>
-                    </li>
-                  </ul>
-                </article>
-              </section>
-            ) : (
-              <div className="empty-state">
-                <h2>No participant data yet</h2>
-                <p>Use the refresh button to pull the latest participant summary.</p>
+                  <article className="card stats-card">
+                    <h3>Engagement summary</h3>
+                    <ul>
+                      <li>
+                        <span>Total events</span>
+                        <strong>{summary.summary.totalEvents}</strong>
+                      </li>
+                      <li>
+                        <span>Sessions attended</span>
+                        <strong>{summary.summary.attendedSessions}</strong>
+                      </li>
+                      <li>
+                        <span>Score</span>
+                        <strong>{summary.summary.score}</strong>
+                      </li>
+                    </ul>
+                  </article>
+                </section>
+              ) : (
+                <div className="empty-state">
+                  <h2>No participant data yet</h2>
+                  <p>Use the refresh button to pull the latest participant summary.</p>
+                </div>
+              )}
+
+              <div style={{ position: 'fixed', bottom: 20, right: 20 }}>
+                <CopilotChat userId="dev-user-1" />
               </div>
-            )}
-          </div>
-        )}
-      </main>
-    </div>
+            </div>
+          </>
+          )}
+        </main>
+      </div>
+    </DirectLineTokenProvider>
+
+  </>
   );
 }
 
