@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { CustomError } from "../middleware/errorHandler";
 import { config } from "../config";
 
@@ -28,9 +28,14 @@ export const getBotToken = async (req: Request, res: Response): Promise<void> =>
     res.json({ token, conversationId, meta, expires_in });
   } catch (error) {
     if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError;
+      const errorMessage = axiosError.message || "Unknown axios error";
+      throw new CustomError(`Failed to fetch token: ${errorMessage}`, 502);
+    }
+    if (error instanceof Error) {
       throw new CustomError(`Failed to fetch token: ${error.message}`, 502);
     }
-    throw error;
+    throw new CustomError("Failed to fetch token: Unknown error", 502);
   }
 };
 
