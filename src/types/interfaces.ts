@@ -14,3 +14,9 @@ export interface AuthContext {
   expiresAt?: number;
 }
 
+export interface SessionData {
+  user: DemoUser;
+  expiresAt: number;
+  createdAt: number;
+}
+

@@ -1,0 +1,73 @@
+/* Skeleton Loading Styles */
+.skeleton-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.3) 25%,
+    rgba(30, 41, 59, 0.5) 50%,
+    rgba(30, 41, 59, 0.3) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-title {
+  background: rgba(30, 41, 59, 0.6);
+  border-radius: 0.5rem;
+}
+
+.skeleton-text {
+  background: rgba(30, 41, 59, 0.4);
+  border-radius: 0.375rem;
+}
+
+.skeleton-label {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 0.25rem;
+}
+
+.skeleton-input {
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 0.75rem;
+}
+
+.skeleton-button {
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.85rem;
+}
+
+.skeleton-radio {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 0.85rem;
+}
+
+.skeleton-number {
+  background: rgba(30, 41, 59, 0.6);
+  border-radius: 0.5rem;
+}
+
+.skeleton-stat-item {
+  background: rgba(30, 41, 59, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 0.85rem;
+}
+
+

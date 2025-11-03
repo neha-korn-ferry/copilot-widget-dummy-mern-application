@@ -1,50 +1,58 @@
-import "dotenv/config";
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import axios from 'axios'
+import { config } from "./config";
+import { errorHandler, asyncHandler } from "./middleware/errorHandler";
+import { requestLogger } from "./middleware/requestLogger";
 import authRoutes from "./routes/auth.routes";
 import participantRoutes from "./routes/participant.routes";
+import { getBotToken } from "./controllers/bot.controller";
 
 const app = express();
-const PORT = Number(process.env.PORT ?? 4000);
-const allowOrigin = ((process.env.NODE_ENV ==='development') ? 'http://localhost:3001' :  process.env.CLIENT_ORIGIN) ;
-const DIRECT_LINE_TOKEN_ENDPOINT = process.env.DIRECT_LINE_TOKEN_ENDPOINT || '';
 
-
-app.use(express.json());
-app.use(cors({
-  origin: allowOrigin, 
-  credentials: true,               
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-
+// Middleware
+app.use(requestLogger);
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cors(config.cors));
 app.use(cookieParser());
+
+// Health check endpoint
+app.get("/health", (req: Request, res: Response) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Routes
 app.use("/auth", authRoutes);
 app.use(participantRoutes);
-app.get('/api/bot-token', async (req, res) => {
-  try {
-    const resp = await axios.get(DIRECT_LINE_TOKEN_ENDPOINT, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-    });
+app.get("/api/bot-token", asyncHandler(getBotToken));
 
-    const { token, conversationId, expires_in = 3600 } = resp.data;
-    if (!token) throw new Error('no token');
-
-    // OPTIONAL: add any data you want the bot to see
-    const meta = {
-      // appToken: 'abc123',
-      // sessionId: uuidv4(),
-    };
-
-    res.json({ token, conversationId, meta });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'token fetch failed' });
-  }
+// 404 handler
+app.use((req: Request, res: Response) => {
+  res.status(404).json({ error: "Route not found" });
 });
 
-app.listen(PORT, () => {  
-  console.log(`API server listening on port ${PORT}`);
+// Error handler (must be last)
+app.use(errorHandler);
+
+const server = app.listen(config.port, () => {
+  console.log(`API server listening on port ${config.port} (${config.nodeEnv})`);
 });
+
+// Graceful shutdown
+const gracefulShutdown = () => {
+  console.log("Shutting down gracefully...");
+  server.close(() => {
+    console.log("Server closed");
+    process.exit(0);
+  });
+
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.error("Forcing shutdown...");
+    process.exit(1);
+  }, 10000);
+};
+
+process.on("SIGTERM", gracefulShutdown);
+process.on("SIGINT", gracefulShutdown);
