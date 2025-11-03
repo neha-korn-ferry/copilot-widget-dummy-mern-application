@@ -7,15 +7,18 @@ export interface AppError extends Error {
   isOperational?: boolean;
 }
 
-export class CustomError extends Error implements AppError {
-  statusCode: number;
-  isOperational: boolean;
+export class CustomError extends Error {
+  public statusCode: number;
 
   constructor(message: string, statusCode: number = 500) {
     super(message);
     this.statusCode = statusCode;
-    this.isOperational = true;
-    Error.captureStackTrace(this, this.constructor);
+    this.name = this.constructor.name;
+
+    // Fix for captureStackTrace
+    if (Error.captureStackTrace && typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, this.constructor);
+    }
   }
 }
 
