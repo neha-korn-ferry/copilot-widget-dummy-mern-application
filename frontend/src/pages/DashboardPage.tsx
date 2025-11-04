@@ -26,6 +26,7 @@ export const DashboardPage: React.FC = () => {
         if (summaryData) {
           setAuthenticatedVia(summaryData.authenticatedVia);
           setSummary(summaryData);
+            setIsInitialLoad(false);
           setStatus('Session restored using stored bearer token.');
           return;
         }
