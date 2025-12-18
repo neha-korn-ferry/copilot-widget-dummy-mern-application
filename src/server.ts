@@ -6,6 +6,7 @@ import { errorHandler, asyncHandler } from "./middleware/errorHandler";
 import { requestLogger } from "./middleware/requestLogger";
 import authRoutes from "./routes/auth.routes";
 import participantRoutes from "./routes/participant.routes";
+import powerAutomateRoutes from "./routes/powerAutomate.route"
 import { getBotToken } from "./controllers/bot.controller";
 
 const app = express();
@@ -25,6 +26,7 @@ app.get("/health", (req: Request, res: Response) => {
 // Routes
 app.use("/auth", authRoutes);
 app.use(participantRoutes);
+app.use("/api/power-automate",powerAutomateRoutes);
 app.get("/api/bot-token", asyncHandler(getBotToken));
 
 // 404 handler
