@@ -26,6 +26,8 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({ userId }) => {
   const activitySubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const defaultMessage : String = "Hello! I'm your Copilot Assistant. How can I help you today?";
+
   const toggleChat = useCallback(() => {
     setIsOpen((prev) => !prev);
   }, []);

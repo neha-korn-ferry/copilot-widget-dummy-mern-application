@@ -5,7 +5,8 @@ import { DashboardSkeleton } from '../components/Skeletons/DashboardSkeleton';
 import { SignInSkeleton } from '../components/Skeletons/SignInSkeleton';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import { AuthMode, ParticipantSummary } from '../types';
-import {CopilotChat }from '../features/chat/components/CopilotChat';
+import { CopilotChat } from '../features/chat/components/CopilotChat';
+import { CopilotChatPowerAutomate } from '../features/chat/components/CopilotChatPowerAutomate';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export const DashboardPage: React.FC = () => {
         if (summaryData) {
           setAuthenticatedVia(summaryData.authenticatedVia);
           setSummary(summaryData);
-            setIsInitialLoad(false);
+          setIsInitialLoad(false);
           setStatus('Session restored using stored bearer token.');
           return;
         }
@@ -107,7 +108,7 @@ export const DashboardPage: React.FC = () => {
         onSwitchAccount={() => navigate('/', { replace: true })}
       />
       <div style={{ position: 'fixed', bottom: 20, right: 20 }}>
-        <CopilotChat userId="dev-user-1" />
+        <CopilotChatPowerAutomate/>
       </div>
     </>
   );
