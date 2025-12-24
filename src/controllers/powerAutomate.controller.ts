@@ -2,10 +2,7 @@ import { Request, Response } from "express";
 import axios from "axios";
 import https from "https";
 
-const httpsAgent = new https.Agent({
-    keepAlive: false,
-    rejectUnauthorized: true
-});
+const httpsAgent = new https.Agent({ keepAlive: false });
 
 export const connectPowerAutomate = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -13,8 +10,6 @@ export const connectPowerAutomate = async (req: Request, res: Response): Promise
         if (!flowUrl) {
             throw new Error("Power Automate flow URL not configured");
         }
-
-        console.log("Received request to connect to Power Automate:", req.body);
 
         const participantEmail = req.body.participantEmail;
         const userPrompt = req.body.userPrompt;
@@ -175,18 +170,20 @@ export const connectPowerAutomate = async (req: Request, res: Response): Promise
 
         const payload = {
             participantSummary,
-            userPrompt: req.body.userPrompt
+            userPrompt
         }
+
+        console.log("Sending userPrompt to Power Automate:", userPrompt);
 
 
         const response = await axios.post(flowUrl, payload, {
             headers: {
                 "Content-Type": "application/json"
             },
-            timeout: 60000, // 60 seconds
+            timeout: 60000,
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
-            proxy: false, 
+            proxy: false,
             httpsAgent
         })
 

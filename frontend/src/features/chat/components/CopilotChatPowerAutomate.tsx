@@ -1,19 +1,15 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import apiClient from '../../../services/api.service';
+import './CopilotChat.css';
 
 interface Message {
-  type: string;
-  text?: string;
-  name?: string;
-  value?: unknown;
-  from?: {
-    id?: string;
-    role?: string;
-  };
-  showOptions?: boolean;
+  id: string;
+  type: 'user' | 'bot';
+  text: string;
+  timestamp: Date;
 }
 
-type ConversationStep = 'welcome' | 'coach_email' | 'participant_email' | 'user_prompt' | 'chat' | 'options';
+type ConversationStep = 'welcome' | 'coach_email' | 'participant_email' | 'chat';
 
 // Email validation regex
 const isValidEmail = (email: string): boolean => {
@@ -21,10 +17,45 @@ const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email);
 };
 
+// Generate unique ID
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+// Format time
+const formatTime = (date: Date) => {
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+// SVG Icons as components
+const ChatIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="chat-toggle-icon">
+    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
+    <path d="M7 9h10v2H7zm0-3h10v2H7zm0 6h7v2H7z"/>
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+  </svg>
+);
+
+const SendIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+  </svg>
+);
+
+const UserIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+  </svg>
+);
+
 export const CopilotChatPowerAutomate: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -32,57 +63,54 @@ export const CopilotChatPowerAutomate: React.FC = () => {
   const [conversationStep, setConversationStep] = useState<ConversationStep>('welcome');
   const [coachEmail, setCoachEmail] = useState('');
   const [participantEmail, setParticipantEmail] = useState('');
+  const [showQuickActions, setShowQuickActions] = useState(false);
 
   const toggleChat = useCallback(() => {
-    setIsOpen((prev) => !prev);
-  }, []);
+    if (isOpen) {
+      setIsClosing(true);
+      setTimeout(() => {
+        setIsOpen(false);
+        setIsClosing(false);
+      }, 300);
+    } else {
+      setIsOpen(true);
+    }
+  }, [isOpen]);
 
-  const addBotMessage = useCallback((text: string, showOptions: boolean = false) => {
-    const botMessage: Message = {
-      type: 'message',
+  const addMessage = useCallback((type: 'user' | 'bot', text: string) => {
+    const newMessage: Message = {
+      id: generateId(),
+      type,
       text,
-      from: { id: 'bot', role: 'bot' },
-      showOptions,
+      timestamp: new Date(),
     };
-    setMessages((prev) => [...prev, botMessage]);
-  }, []);
-
-  const addUserMessage = useCallback((text: string) => {
-    const userMessage: Message = {
-      type: 'message',
-      text,
-      from: { id: 'user', role: 'user' },
-    };
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, newMessage]);
   }, []);
 
   // Show welcome message when chat opens
   useEffect(() => {
     if (isOpen && messages.length === 0 && conversationStep === 'welcome') {
-      const welcomeMessage: Message = {
-        type: 'message',
-        text: 'Hello! Welcome to Copilot Assistant. I can help you get information about training plans, career guidance, and more.',
-        from: { id: 'bot', role: 'bot' },
-      };
-      setMessages([welcomeMessage]);
-      
-      // After welcome, ask for coach email
       setTimeout(() => {
-        addBotMessage('Please enter the coach email:');
-        setConversationStep('coach_email');
-      }, 500);
+        addMessage('bot', '👋 Welcome to Copilot Assistant!\n\nI can help you with training plans, career guidance, and participant insights.');
+        setTimeout(() => {
+          addMessage('bot', '📧 Please enter the coach email to get started:');
+          setConversationStep('coach_email');
+        }, 800);
+      }, 300);
     }
-  }, [isOpen, messages.length, conversationStep, addBotMessage]);
+  }, [isOpen, messages.length, conversationStep, addMessage]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (isOpen && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, isLoading]);
 
   const sendToBackend = useCallback(async (userPrompt: string) => {
     setIsLoading(true);
+    setShowQuickActions(false);
+    
     try {
       const response = await apiClient.post('/api/power-automate/connect', {
         coachEmail,
@@ -90,120 +118,87 @@ export const CopilotChatPowerAutomate: React.FC = () => {
         userPrompt,
       });
 
-      // Handle the API response
-      const responseText = typeof response.data === 'string'
-        ? response.data
-        : response.data?.message || response.data?.text || JSON.stringify(response.data, null, 2);
+      const responseText = response?.data?.data?.reply || response?.data?.message || 'Response received successfully.';
+      addMessage('bot', responseText);
       
-      addBotMessage(responseText);
-      
-      // After successful response, show options
       setTimeout(() => {
-        addBotMessage('What would you like to do next?', true);
-        setConversationStep('options');
+        setShowQuickActions(true);
       }, 500);
+
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      const errorText = err?.response?.data?.message || err?.message || 'Something went wrong. Please try again.';
+      addMessage('bot', `❌ ${errorText}`);
       
-    } catch (error: any) {
-      const errorText = error?.response?.data?.message || error?.message || 'Something went wrong. Please try again.';
-      addBotMessage(errorText);
-      
-      // Even on error, show options to retry or change
       setTimeout(() => {
-        addBotMessage('What would you like to do next?', true);
-        setConversationStep('options');
+        setShowQuickActions(true);
       }, 500);
     } finally {
       setIsLoading(false);
     }
-  }, [coachEmail, participantEmail, addBotMessage]);
+  }, [coachEmail, participantEmail, addMessage]);
 
-  // Handle option button clicks
-  const handleOptionClick = useCallback((option: 'ask_more' | 'change_participant') => {
-    if (option === 'ask_more') {
-      addUserMessage('Ask more about this participant');
-      setTimeout(() => {
-        addBotMessage(`Great! What else would you like to know about ${participantEmail}?`);
-        setConversationStep('chat');
-      }, 300);
-    } else if (option === 'change_participant') {
-      addUserMessage('Change participant');
-      // Only reset participant email, keep coach email
-      setParticipantEmail('');
-      setTimeout(() => {
-        addBotMessage('Sure! Please enter the new participant email:');
-        setConversationStep('participant_email');
-      }, 300);
-    }
-  }, [addUserMessage, addBotMessage, participantEmail]);
+  const handleChangeParticipant = useCallback(() => {
+    addMessage('user', 'Change participant');
+    setParticipantEmail('');
+    setShowQuickActions(false);
+    setTimeout(() => {
+      addMessage('bot', '👤 Sure! Please enter the new participant email:');
+      setConversationStep('participant_email');
+    }, 300);
+  }, [addMessage]);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
 
     const userInput = input.trim();
-    addUserMessage(userInput);
+    addMessage('user', userInput);
     setInput('');
+    setShowQuickActions(false);
 
     switch (conversationStep) {
       case 'coach_email':
-        // Validate email
         if (!isValidEmail(userInput)) {
           setTimeout(() => {
-            addBotMessage('Please enter a valid email address (e.g., coach@example.com):');
+            addMessage('bot', '⚠️ Please enter a valid email address.\n\nExample: coach@example.com');
           }, 300);
           return;
         }
         setCoachEmail(userInput);
         setConversationStep('participant_email');
         setTimeout(() => {
-          addBotMessage('Thank you! Now please enter the participant email:');
+          addMessage('bot', '✅ Great! Now please enter the participant email:');
         }, 300);
         break;
 
       case 'participant_email':
-        // Validate email
         if (!isValidEmail(userInput)) {
           setTimeout(() => {
-            addBotMessage('Please enter a valid email address (e.g., participant@example.com):');
+            addMessage('bot', '⚠️ Please enter a valid email address.\n\nExample: participant@example.com');
           }, 300);
           return;
         }
         setParticipantEmail(userInput);
-        setConversationStep('user_prompt');
+        setConversationStep('chat');
         setTimeout(() => {
-          addBotMessage('Great! What information would you like to get for this participant? (e.g., training plan, career guidance, progress report)');
+          addMessage('bot', '🎉 Great! I found the participant. Here are some things you can ask about (availability may vary):\n\n👤 Profile & Background\n• Basic info, position, company\n• Bio & education\n• LinkedIn profile\n• Location & timezone\n\n📄 Documents\n• Resume details\n• Assessment reports (KF360, Learning Agility, etc.)\n\n🎯 Goals & Development\n• Current goals\n• Career needs & timeline\n\n📅 Appointments\n• Upcoming & past sessions\n• Appointment status\n\n🚀 Onboarding & Program\n• Program status & phase\n• Start/end dates\n• Coaching status\n• Onboarding questionnaires\n\n📊 Activity\n• Recent activities\n• Account & registration info\n\n💡 Just ask naturally - I\'ll share what\'s available!');
         }, 300);
         break;
 
-      case 'user_prompt':
       case 'chat':
-        // Validate prompt is not too short
         if (userInput.length < 3) {
           setTimeout(() => {
-            addBotMessage('Please enter a more detailed question or request:');
+            addMessage('bot', '💡 Please enter a more detailed question or request.');
           }, 300);
           return;
         }
         await sendToBackend(userInput);
         break;
 
-      case 'options':
-        // If user types instead of clicking buttons
-        const lowerInput = userInput.toLowerCase();
-        if (lowerInput.includes('more') || lowerInput.includes('same') || lowerInput.includes('ask')) {
-          handleOptionClick('ask_more');
-        } else if (lowerInput.includes('change') || lowerInput.includes('new') || lowerInput.includes('different')) {
-          handleOptionClick('change_participant');
-        } else {
-          // Treat as a new question for same participant
-          setConversationStep('chat');
-          await sendToBackend(userInput);
-        }
-        break;
-
       default:
         break;
     }
-  }, [input, isLoading, conversationStep, addUserMessage, addBotMessage, sendToBackend, handleOptionClick]);
+  }, [input, isLoading, conversationStep, addMessage, sendToBackend]);
 
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -223,240 +218,139 @@ export const CopilotChatPowerAutomate: React.FC = () => {
         return 'Enter coach email...';
       case 'participant_email':
         return 'Enter participant email...';
-      case 'user_prompt':
-        return 'e.g., Give me training plan...';
       case 'chat':
-        return 'Type your question...';
-      case 'options':
-        return 'Choose an option or type your question...';
+        return 'Ask me anything...';
       default:
         return 'Type a message...';
     }
   }, [conversationStep]);
 
-  const chatButtonStyle = useMemo(
-    () => ({
-      position: 'fixed' as const,
-      bottom: '20px',
-      right: '20px',
-      width: '60px',
-      height: '60px',
-      borderRadius: '50%',
-      backgroundColor: '#0b111d',
-      color: 'white',
-      border: 'none',
-      fontSize: '30px',
-      cursor: 'pointer',
-      boxShadow: 'rgba(197, 136, 71, 0.2) 2px 7px 20px',
-      zIndex: 1000,
-    }),
-    []
-  );
-
-  const chatWindowStyle = useMemo(
-    () => ({
-      background: 'white',
-      border: '1px solid #ccc',
-      borderRadius: '12px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      fontFamily: 'Segoe UI, sans-serif',
-      position: 'fixed' as const,
-      bottom: '5px',
-      right: '20px',
-      width: '400px',
-      height: '500px',
-      zIndex: 1001,
-      overflow: 'hidden' as const,
-    }),
-    []
-  );
-
-  const optionButtonStyle = useMemo(
-    () => ({
-      padding: '10px 16px',
-      margin: '4px',
-      border: '1px solid #0078d4',
-      borderRadius: '20px',
-      background: 'white',
-      color: '#0078d4',
-      cursor: 'pointer',
-      fontSize: '13px',
-      fontWeight: 500,
-      transition: 'all 0.2s ease',
-    }),
-    []
-  );
-
   const isInputDisabled = conversationStep === 'welcome' || isLoading;
+
+  // Get current step number for indicator
+  const getStepNumber = () => {
+    switch (conversationStep) {
+      case 'welcome': return 0;
+      case 'coach_email': return 1;
+      case 'participant_email': return 2;
+      case 'chat': return 3;
+      default: return 0;
+    }
+  };
 
   return (
     <>
+      {/* Chat Toggle Button */}
       <button
         onClick={toggleChat}
-        style={chatButtonStyle}
+        className={`chat-toggle-btn ${isOpen ? 'open' : ''}`}
         aria-label={isOpen ? 'Close chat' : 'Open chat'}
         aria-expanded={isOpen}
       >
-        💬
+        {isOpen ? <CloseIcon /> : <ChatIcon />}
       </button>
 
+      {/* Chat Window */}
       {isOpen && (
-        <div style={chatWindowStyle} role="dialog" aria-label="Power Automate Chat">
-          <div
-            style={{
-              padding: '12px',
-              background: '#0078d4',
-              color: 'white',
-              borderRadius: '12px 12px 0 0',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <strong>Copilot Assistant</strong>
+        <div 
+          className={`chat-window ${isClosing ? 'closing' : ''}`} 
+          role="dialog" 
+          aria-label="Copilot Assistant"
+        >
+          {/* Header */}
+          <div className="chat-header">
+            <div className="chat-header-info">
+              <div className="chat-avatar">🤖</div>
+              <div className="chat-header-text">
+                <span className="chat-header-title">Copilot Assistant</span>
+                <div className="chat-header-status">
+                  <span className="status-dot"></span>
+                  <span>Online</span>
+                </div>
+              </div>
+            </div>
             <button
               onClick={toggleChat}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'white',
-                fontSize: '24px',
-                cursor: 'pointer',
-                padding: '0 8px',
-                lineHeight: '1',
-              }}
+              className="chat-close-btn"
               aria-label="Close chat"
             >
-              ×
+              <CloseIcon />
             </button>
           </div>
 
-          <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
-            {messages.map((msg, i) => (
-              <div key={`${msg.type}-${i}`}>
-                <div
-                  style={{
-                    margin: '8px 0',
-                    textAlign: msg.from?.role === 'user' ? 'right' : 'left',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'inline-block',
-                      maxWidth: '80%',
-                      padding: '8px 12px',
-                      borderRadius: '18px',
-                      background: msg.from?.role === 'user' ? '#0078d4' : '#f1f1f1',
-                      color: msg.from?.role === 'user' ? 'white' : 'black',
-                      wordWrap: 'break-word' as const,
-                      whiteSpace: 'pre-wrap' as const,
-                    }}
-                  >
-                    {msg.text || msg.name || (typeof msg.value === 'string' ? msg.value : JSON.stringify(msg.value))}
-                  </div>
+          {/* Step Indicator */}
+          {conversationStep !== 'chat' && (
+            <div className="step-indicator">
+              <div className={`step-dot ${getStepNumber() >= 1 ? 'active' : ''} ${getStepNumber() > 1 ? 'completed' : ''}`}></div>
+              <div className={`step-dot ${getStepNumber() >= 2 ? 'active' : ''} ${getStepNumber() > 2 ? 'completed' : ''}`}></div>
+              <div className={`step-dot ${getStepNumber() >= 3 ? 'active' : ''}`}></div>
+            </div>
+          )}
+
+          {/* Messages */}
+          <div className="chat-messages">
+            {messages.map((msg) => (
+              <div key={msg.id} className={`message-wrapper ${msg.type}`}>
+                <div className={`message-bubble ${msg.type}`}>
+                  {msg.text}
                 </div>
-                
-                {/* Show option buttons */}
-                {msg.showOptions && conversationStep === 'options' && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '8px',
-                      marginTop: '8px',
-                      marginBottom: '8px',
-                    }}
-                  >
-                    <button
-                      onClick={() => handleOptionClick('ask_more')}
-                      style={optionButtonStyle}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#0078d4';
-                        e.currentTarget.style.color = 'white';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'white';
-                        e.currentTarget.style.color = '#0078d4';
-                      }}
-                    >
-                      🔄 Ask more about this participant
-                    </button>
-                    <button
-                      onClick={() => handleOptionClick('change_participant')}
-                      style={optionButtonStyle}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#0078d4';
-                        e.currentTarget.style.color = 'white';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'white';
-                        e.currentTarget.style.color = '#0078d4';
-                      }}
-                    >
-                      👤 Change participant
-                    </button>
-                  </div>
-                )}
+                <span className="message-time">{formatTime(msg.timestamp)}</span>
               </div>
             ))}
+
+            {/* Typing Indicator */}
             {isLoading && (
-              <div
-                style={{
-                  margin: '8px 0',
-                  textAlign: 'left',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'inline-block',
-                    padding: '8px 12px',
-                    borderRadius: '18px',
-                    background: '#f1f1f1',
-                    color: '#666',
-                  }}
-                >
-                  Typing...
+              <div className="message-wrapper bot">
+                <div className="typing-indicator">
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
                 </div>
               </div>
             )}
+
+            {/* Quick Actions */}
+            {showQuickActions && conversationStep === 'chat' && (
+              <div className="quick-actions">
+                <button
+                  onClick={handleChangeParticipant}
+                  className="quick-action-btn"
+                >
+                  <UserIcon />
+                  Change Participant
+                </button>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
-          <div style={{ padding: '12px', borderTop: '1px solid #eee', display: 'flex' }}>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={getPlaceholder()}
-              disabled={isInputDisabled}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                border: '1px solid #ccc',
-                borderRadius: '20px',
-                marginRight: '8px',
-                outline: 'none',
-                opacity: isInputDisabled ? 0.7 : 1,
-              }}
-              aria-label="Message input"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isInputDisabled}
-              style={{
-                padding: '8px 16px',
-                background: input.trim() && !isInputDisabled ? '#0078d4' : '#ccc',
-                color: 'white',
-                border: 'none',
-                borderRadius: '20px',
-                cursor: input.trim() && !isInputDisabled ? 'pointer' : 'not-allowed',
-              }}
-              aria-label="Send message"
-            >
-              {isLoading ? '...' : 'Send'}
-            </button>
+          {/* Input Area */}
+          <div className="chat-input-area">
+            <div className="chat-input-container">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={getPlaceholder()}
+                disabled={isInputDisabled}
+                className="chat-input"
+                aria-label="Message input"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isInputDisabled}
+                className="chat-send-btn"
+                aria-label="Send message"
+              >
+                <SendIcon />
+              </button>
+            </div>
+          </div>
+
+          {/* Branding */}
+          <div className="chat-branding">
+            Powered by <a href="#">Power Automate</a>
           </div>
         </div>
       )}
