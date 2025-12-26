@@ -1,9 +1,12 @@
 {
-  "redirects": [
+  "routes": [
     {
-      "source": "/**",
-      "destination": "/index.html",
-      "statusCode": 200
+      "src": "^/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "^/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
