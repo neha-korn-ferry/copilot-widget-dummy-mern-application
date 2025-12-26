@@ -37,8 +37,8 @@ app.get("/api/bot-token", asyncHandler(getBotToken));
 const frontendPath = path.join(__dirname, "../frontend/build"); 
 app.use(express.static(frontendPath));
 
-// 2. Catch-all route (Yeh 404 handler ki jagah kaam karega frontend ke liye)
-app.get('(.*)', (req: Request, res: Response) => {
+// 2. Catch-all route (Regex use karke)
+app.get(/^(?!\/api).+/, (req: Request, res: Response) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
