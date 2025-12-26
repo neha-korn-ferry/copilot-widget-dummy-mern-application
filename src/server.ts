@@ -8,6 +8,7 @@ import authRoutes from "./routes/auth.routes";
 import participantRoutes from "./routes/participant.routes";
 import powerAutomateRoutes from "./routes/powerAutomate.route"
 import { getBotToken } from "./controllers/bot.controller";
+import path from "path";
 
 const app = express();
 
@@ -29,13 +30,22 @@ app.use(participantRoutes);
 app.use("/api/power-automate",powerAutomateRoutes);
 app.get("/api/bot-token", asyncHandler(getBotToken));
 
-// 404 handler
-app.use((req: Request, res: Response) => {
-  res.status(404).json({ error: "Route not found" });
+// ... saare API routes ke BAAD (Line 31 ke niche) ...
+
+// 1. Static files serve karein
+// '__dirname' src ke andar hai, isliye '../' se bahar nikal kar frontend/build mein jayenge
+const frontendPath = path.join(__dirname, "../frontend/build"); 
+app.use(express.static(frontendPath));
+
+// 2. Catch-all route (Yeh 404 handler ki jagah kaam karega frontend ke liye)
+app.get("*", (req: Request, res: Response) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
 });
 
-// Error handler (must be last)
+// 3. Error handler (Sabse last mein)
 app.use(errorHandler);
+
+
 
 const server = app.listen(config.port, () => {
   console.log(`API server listening on port ${config.port} (${config.nodeEnv})`);
